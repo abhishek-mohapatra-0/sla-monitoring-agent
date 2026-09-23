@@ -1,0 +1,49 @@
+table DimTeam
+	lineageTag: 122dfc0a-d00e-5021-9194-8cddf300c0d8
+
+	column TeamKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: ebac3f18-9b6f-50a6-bd2b-a0105c79ad3c
+		summarizeBy: none
+		sourceColumn: TeamKey
+
+		annotation SummarizationSetBy = User
+
+	column Team
+		dataType: string
+		lineageTag: 0774fb4a-8658-5262-8462-5768fb0ebf0a
+		summarizeBy: none
+		sourceColumn: Team
+
+		annotation SummarizationSetBy = User
+
+	column SupportLevel
+		dataType: string
+		lineageTag: 50e694fd-13aa-5375-bfbf-55ef3a064163
+		summarizeBy: none
+		sourceColumn: SupportLevel
+
+		annotation SummarizationSetBy = User
+
+	column Location
+		dataType: string
+		lineageTag: 1318dc1e-6e3b-565c-ae31-72984840b916
+		summarizeBy: none
+		sourceColumn: Location
+
+		annotation SummarizationSetBy = User
+
+	partition DimTeam = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimTeam.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"TeamKey", Int64.Type}, {"Team", type text}, {"SupportLevel", type text}, {"Location", type text}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

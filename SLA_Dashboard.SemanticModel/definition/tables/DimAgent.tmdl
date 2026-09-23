@@ -1,0 +1,60 @@
+table DimAgent
+	lineageTag: 1e0e11fe-f822-5f8e-ad49-b544ac85ddc6
+
+	column AgentKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: a70af1e3-5a06-542d-b1bd-9c61a16af088
+		summarizeBy: none
+		sourceColumn: AgentKey
+
+		annotation SummarizationSetBy = User
+
+	column AgentName
+		dataType: string
+		lineageTag: decd7c98-7ae1-5da0-8371-abf77fcd2613
+		summarizeBy: none
+		sourceColumn: AgentName
+
+		annotation SummarizationSetBy = User
+
+	column TeamKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 67851048-a8f7-5838-93d8-008d82add433
+		summarizeBy: none
+		sourceColumn: TeamKey
+
+		annotation SummarizationSetBy = User
+
+	column Level
+		dataType: string
+		lineageTag: 5ac70432-3d62-5330-b7db-48096c969d95
+		summarizeBy: none
+		sourceColumn: Level
+
+		annotation SummarizationSetBy = User
+
+	column HireDate
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: ab77616c-a7b7-5c9f-b856-4afe2a500c99
+		summarizeBy: none
+		sourceColumn: HireDate
+
+		annotation SummarizationSetBy = User
+
+	partition DimAgent = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimAgent.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"AgentKey", Int64.Type}, {"AgentName", type text}, {"TeamKey", Int64.Type}, {"Level", type text}, {"HireDate", type date}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

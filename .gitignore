@@ -1,0 +1,8 @@
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+app/.venv/
+__pycache__/
+*.pyc
+Claude outputs/
+publish_to_github.py
+publish_to_github.bat

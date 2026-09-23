@@ -1,0 +1,41 @@
+table DimCategory
+	lineageTag: 24342e27-e5c7-5f0a-837f-d29933647b81
+
+	column CategoryKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 4cfd981a-af3d-5b5f-b222-ef5d40eb7ecc
+		summarizeBy: none
+		sourceColumn: CategoryKey
+
+		annotation SummarizationSetBy = User
+
+	column Category
+		dataType: string
+		lineageTag: 53e59326-2be6-530b-b587-12951bbb3adf
+		summarizeBy: none
+		sourceColumn: Category
+
+		annotation SummarizationSetBy = User
+
+	column SubCategory
+		dataType: string
+		lineageTag: 297a4881-aff8-51c6-a9af-d84d40921e1e
+		summarizeBy: none
+		sourceColumn: SubCategory
+
+		annotation SummarizationSetBy = User
+
+	partition DimCategory = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimCategory.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"CategoryKey", Int64.Type}, {"Category", type text}, {"SubCategory", type text}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,21 @@
+CategoryKey,Category,SubCategory
+1,Access & Identity,Password Reset
+2,Access & Identity,Account Unlock
+3,Access & Identity,Access Request
+4,Hardware,Laptop / Desktop
+5,Hardware,Printer
+6,Hardware,Peripherals
+7,Network,VPN
+8,Network,Wi-Fi
+9,Network,LAN / Connectivity
+10,Application,ERP (SAP)
+11,Application,CRM
+12,Application,Email / Outlook
+13,Application,MS Office
+14,Infrastructure,Server
+15,Infrastructure,Storage
+16,Infrastructure,Cloud VM
+17,Database,Performance
+18,Database,Backup / Restore
+19,Security,Phishing Report
+20,Security,Malware Alert

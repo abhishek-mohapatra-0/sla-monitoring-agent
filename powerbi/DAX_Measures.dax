@@ -1,0 +1,262 @@
+// =====================================================================
+//  SLA Monitoring Dashboard - DAX
+//  Create an empty table called _Measures (Enter data -> OK) and add
+//  every measure below to it. Folder names are suggestions for
+//  Model view -> Properties -> Display folder.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+//  CALCULATED COLUMNS  (add to FactTickets)
+// ---------------------------------------------------------------------
+
+// Hours left before the resolution SLA breaches (negative = already overdue)
+Hours To Breach =
+IF (
+    FactTickets[IsOpen] = 1,
+    ( FactTickets[ResolutionDueDateTime] - MAX ( DimSnapshot[AsOfDateTime] ) ) * 24
+)
+
+// Age bucket for open tickets
+Backlog Age Bucket =
+VAR AgeHrs = ( MAX ( DimSnapshot[AsOfDateTime] ) - FactTickets[CreatedDateTime] ) * 24
+RETURN
+    IF (
+        FactTickets[IsOpen] = 1,
+        SWITCH ( TRUE (),
+            AgeHrs < 4,   "0-4 h",
+            AgeHrs < 24,  "4-24 h",
+            AgeHrs < 72,  "1-3 d",
+            AgeHrs < 168, "3-7 d",
+            "7+ d"
+        )
+    )
+
+// Sort helper for the bucket (Column tools -> Sort by column)
+// (computed from age directly - referencing the bucket column would cause a circular dependency)
+Backlog Age Sort =
+VAR AgeHrs = ( MAX ( DimSnapshot[AsOfDateTime] ) - FactTickets[CreatedDateTime] ) * 24
+RETURN
+    IF (
+        FactTickets[IsOpen] = 1,
+        SWITCH ( TRUE (), AgeHrs < 4, 1, AgeHrs < 24, 2, AgeHrs < 72, 3, AgeHrs < 168, 4, 5 )
+    )
+
+// (DimDate) Month axis label like "Sep '25" - sort by YearMonthSort
+MonthLabel =
+FORMAT ( DimDate[Date], "mmm" ) & " '" & FORMAT ( DimDate[Date], "yy" )
+
+// Groups reassignment counts for the root-cause page
+Reassignment Band =
+SWITCH ( TRUE (),
+    FactTickets[ReassignmentCount] = 0, "0",
+    FactTickets[ReassignmentCount] = 1, "1",
+    FactTickets[ReassignmentCount] = 2, "2",
+    "3+"
+)
+
+// Shift the ticket arrived in (day shift = 08:00-20:00)
+Shift =
+IF ( FactTickets[CreatedHour] >= 8 && FactTickets[CreatedHour] < 20, "Day", "Night" )
+
+
+// ---------------------------------------------------------------------
+//  VOLUME                                         (folder: 1 Volume)
+// ---------------------------------------------------------------------
+
+Total Tickets = COUNTROWS ( FactTickets )
+
+Open Tickets = CALCULATE ( [Total Tickets], FactTickets[IsOpen] = 1 )
+
+Resolved Tickets = CALCULATE ( [Total Tickets], FactTickets[IsOpen] = 0 )
+
+// Uses the inactive ResolvedDate relationship, for Created vs Resolved charts
+Tickets Resolved (Resolved Date) =
+CALCULATE (
+    [Total Tickets],
+    FactTickets[IsOpen] = 0,
+    USERELATIONSHIP ( FactTickets[ResolvedDate], DimDate[Date] )
+)
+
+Backlog Net Change = [Total Tickets] - [Tickets Resolved (Resolved Date)]
+
+Tickets per Agent = DIVIDE ( [Total Tickets], DISTINCTCOUNT ( FactTickets[AgentKey] ) )
+
+
+// ---------------------------------------------------------------------
+//  SLA COMPLIANCE                                 (folder: 2 SLA)
+//  ResponseSLAMet / ResolutionSLAMet are 1 = met, 0 = breached,
+//  blank = still open and not yet due (excluded from the %).
+// ---------------------------------------------------------------------
+
+Response SLA Met      = SUM ( FactTickets[ResponseSLAMet] )
+Response SLA Measured = COUNT ( FactTickets[ResponseSLAMet] )
+Response SLA %        = DIVIDE ( [Response SLA Met], [Response SLA Measured] )
+
+Resolution SLA Met      = SUM ( FactTickets[ResolutionSLAMet] )
+Resolution SLA Measured = COUNT ( FactTickets[ResolutionSLAMet] )
+Resolution SLA %        = DIVIDE ( [Resolution SLA Met], [Resolution SLA Measured] )
+
+// Use == (strict equals). In DAX, BLANK = 0 is TRUE, so "= 0" would wrongly count
+// open, not-yet-due tickets as breaches.
+Breached Tickets  = CALCULATE ( [Total Tickets], FactTickets[ResolutionSLAMet] == 0 )
+Response Breaches = CALCULATE ( [Total Tickets], FactTickets[ResponseSLAMet] == 0 )
+Breach Rate %     = DIVIDE ( [Breached Tickets], [Resolution SLA Measured] )
+Response Breach % = DIVIDE ( [Response Breaches], [Response SLA Measured] )
+
+// Target weighted by the priority mix in the current filter
+// (P1 98%, P2 95%, P3 92%, P4 90% - see DimPriority)
+SLA Target % =
+DIVIDE (
+    SUMX (
+        VALUES ( DimPriority[PriorityKey] ),
+        CALCULATE ( [Resolution SLA Measured] )
+            * CALCULATE ( MAX ( DimPriority[ComplianceTarget] ) )
+    ),
+    [Resolution SLA Measured]
+)
+
+SLA Gap (pts) = ( [Resolution SLA %] - [SLA Target %] ) * 100
+
+// Status: on target / within 3 pts / below. Use with an icon + label, never colour alone.
+SLA Status =
+SWITCH ( TRUE (),
+    ISBLANK ( [Resolution SLA %] ), BLANK (),
+    [Resolution SLA %] >= [SLA Target %],        "On target",
+    [Resolution SLA %] >= [SLA Target %] - 0.03, "Watch",
+    "Below target"
+)
+
+SLA Status Color =
+SWITCH ( [SLA Status],
+    "On target",    "#006300",   -- dark green/amber so text stays readable on white
+    "Watch",        "#8A6100",
+    "Below target", "#D03B3B"
+)
+
+SLA Status Icon =
+SWITCH ( [SLA Status], "On target", "▲", "Watch", "●", "Below target", "▼" )
+
+
+// ---------------------------------------------------------------------
+//  SPEED                                          (folder: 3 Speed)
+// ---------------------------------------------------------------------
+
+MTTA (mins) = AVERAGE ( FactTickets[ResponseMinutes] )
+
+MTTR (hrs) = AVERAGE ( FactTickets[ResolutionHours] )
+
+Median Resolution (hrs) = MEDIAN ( FactTickets[ResolutionHours] )
+
+P90 Resolution (hrs) =
+PERCENTILEX.INC (
+    FILTER ( FactTickets, NOT ISBLANK ( FactTickets[ResolutionHours] ) ),
+    FactTickets[ResolutionHours],
+    0.9
+)
+
+
+// ---------------------------------------------------------------------
+//  LIVE QUEUE                                     (folder: 4 Queue)
+// ---------------------------------------------------------------------
+
+As Of = MAX ( DimSnapshot[AsOfDateTime] )
+
+As Of Label =
+"Data as of " & FORMAT ( [As Of], "dd mmm yyyy, hh:nn" ) & "  ·  "
+    & FORMAT ( MIN ( FactTickets[CreatedDate] ), "mmm yyyy" ) & " – "
+    & FORMAT ( MAX ( FactTickets[CreatedDate] ), "mmm yyyy" )
+
+At-Risk Tickets = CALCULATE ( [Total Tickets], FactTickets[SLAStatus] = "Open - At Risk" )
+
+Overdue Open Tickets = CALCULATE ( [Total Tickets], FactTickets[SLAStatus] = "Open - Overdue" )
+
+Avg Open Age (hrs) =
+VAR AsOf = [As Of]
+RETURN
+    AVERAGEX (
+        FILTER ( FactTickets, FactTickets[IsOpen] = 1 ),
+        ( AsOf - FactTickets[CreatedDateTime] ) * 24
+    )
+
+
+// ---------------------------------------------------------------------
+//  QUALITY                                        (folder: 5 Quality)
+// ---------------------------------------------------------------------
+
+Avg Reassignments = AVERAGE ( FactTickets[ReassignmentCount] )
+
+Multi-Hop % =
+DIVIDE ( CALCULATE ( [Total Tickets], FactTickets[ReassignmentCount] >= 2 ), [Total Tickets] )
+
+Reopen Rate % =
+DIVIDE ( CALCULATE ( [Resolved Tickets], FactTickets[Reopened] = 1 ), [Resolved Tickets] )
+
+Avg CSAT = AVERAGE ( FactTickets[CSATScore] )
+
+CSAT % Satisfied =
+DIVIDE (
+    CALCULATE ( COUNT ( FactTickets[CSATScore] ), FactTickets[CSATScore] >= 4 ),
+    COUNT ( FactTickets[CSATScore] )
+)
+
+
+// ---------------------------------------------------------------------
+//  TIME INTELLIGENCE          (folder: 6 Trend)  - mark DimDate as date table
+// ---------------------------------------------------------------------
+
+Resolution SLA % PM =
+CALCULATE ( [Resolution SLA %], DATEADD ( DimDate[Date], -1, MONTH ) )
+
+Resolution SLA MoM (pts) =
+IF (
+    NOT ISBLANK ( [Resolution SLA % PM] ),
+    ( [Resolution SLA %] - [Resolution SLA % PM] ) * 100
+)
+
+Resolution SLA % 30D =
+CALCULATE (
+    [Resolution SLA %],
+    DATESINPERIOD ( DimDate[Date], MAX ( DimDate[Date] ), -30, DAY )
+)
+
+Total Tickets PM = CALCULATE ( [Total Tickets], DATEADD ( DimDate[Date], -1, MONTH ) )
+
+Tickets MoM % = DIVIDE ( [Total Tickets] - [Total Tickets PM], [Total Tickets PM] )
+
+
+// ---------------------------------------------------------------------
+//  AGENT RANKING                                  (folder: 7 People)
+// ---------------------------------------------------------------------
+
+Agent SLA Rank =
+IF (
+    HASONEVALUE ( DimAgent[AgentName] ),
+    RANKX ( ALLSELECTED ( DimAgent[AgentName] ), [Resolution SLA %], , DESC, DENSE )
+)
+
+
+// ---------------------------------------------------------------------
+//  DYNAMIC TITLES / TEXT                          (folder: 8 Text)
+// ---------------------------------------------------------------------
+
+Title Overview =
+"Resolution SLA " & FORMAT ( [Resolution SLA %], "0.0%" )
+    & " vs " & FORMAT ( [SLA Target %], "0.0%" ) & " target"
+
+KPI Subtitle SLA =
+[SLA Status Icon] & " " & [SLA Status] & "  ·  "
+    & FORMAT ( [SLA Gap (pts)], "+0.0;-0.0" ) & " pts vs " & FORMAT ( [SLA Target %], "0.0%" )
+
+SLA Gap Label =
+IF ( NOT ISBLANK ( [Resolution SLA %] ), [SLA Status Icon] & " " & FORMAT ( [SLA Gap (pts)], "+0.0;-0.0;0.0" ) )
+
+KPI Subtitle Response = FORMAT ( [Response Breaches], "#,0" ) & " first-response breaches"
+KPI Subtitle Tickets  = FORMAT ( [Breached Tickets], "#,0" ) & " resolution breaches"
+KPI Subtitle Open     = FORMAT ( [Overdue Open Tickets], "#,0" ) & " overdue  ·  " & FORMAT ( [At-Risk Tickets], "#,0" ) & " at risk"
+KPI Subtitle MTTR     = "MTTA " & FORMAT ( [MTTA (mins)], "0" ) & " min  ·  P90 " & FORMAT ( [P90 Resolution (hrs)], "0" ) & " h"
+KPI Subtitle Agents   = FORMAT ( DISTINCTCOUNT ( FactTickets[AgentKey] ), "0" ) & " agents  ·  " & FORMAT ( [Tickets per Agent], "#,0" ) & " per agent"
+KPI Subtitle Reassign = FORMAT ( [Multi-Hop %], "0.0%" ) & " reassigned 2+ times"
+KPI Subtitle Reopen   = FORMAT ( CALCULATE ( [Resolved Tickets], FactTickets[Reopened] = 1 ), "#,0" ) & " tickets reopened"
+KPI Subtitle Satisfied = FORMAT ( [CSAT % Satisfied], "0%" ) & " rated 4 or 5"
+KPI Subtitle CSAT     = "Reopen rate " & FORMAT ( [Reopen Rate %], "0.0%" )

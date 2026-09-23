@@ -1,0 +1,5 @@
+expression DataFolder = "C:\Users\Abhishek\Downloads\sla-monitoring-agent\sla-monitoring-agent\data\" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+	lineageTag: ad222c66-f26d-5556-9975-8e05d096006a
+
+	annotation PBI_ResultType = Text
+

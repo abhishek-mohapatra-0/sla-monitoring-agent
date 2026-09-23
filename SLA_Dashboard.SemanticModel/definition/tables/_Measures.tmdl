@@ -1,0 +1,341 @@
+table _Measures
+	lineageTag: 232f850a-d973-5eea-a47e-94154d1adc7a
+
+	measure 'Total Tickets' = COUNTROWS ( FactTickets )
+		formatString: #,0
+		displayFolder: 1 Volume
+		lineageTag: 46bf2e83-85f7-5032-a02e-c3513aefde7c
+
+	measure 'Open Tickets' = CALCULATE ( [Total Tickets], FactTickets[IsOpen] = 1 )
+		formatString: #,0
+		displayFolder: 1 Volume
+		lineageTag: 0625bde4-770a-5d7f-932e-a74e3c6063fc
+
+	measure 'Resolved Tickets' = CALCULATE ( [Total Tickets], FactTickets[IsOpen] = 0 )
+		formatString: #,0
+		displayFolder: 1 Volume
+		lineageTag: 18a1e85f-ecbc-5f0c-8dc1-599c895a2af4
+
+	measure 'Tickets Resolved (Resolved Date)' =
+			CALCULATE (
+			    [Total Tickets],
+			    FactTickets[IsOpen] = 0,
+			    USERELATIONSHIP ( FactTickets[ResolvedDate], DimDate[Date] )
+			)
+		formatString: #,0
+		displayFolder: 1 Volume
+		lineageTag: 757fe811-b983-5fbb-ba65-95ef81762ad8
+
+	measure 'Backlog Net Change' = [Total Tickets] - [Tickets Resolved (Resolved Date)]
+		formatString: #,0
+		displayFolder: 1 Volume
+		lineageTag: b8705779-1f6e-5491-ad6b-7095bcc54663
+
+	measure 'Tickets per Agent' = DIVIDE ( [Total Tickets], DISTINCTCOUNT ( FactTickets[AgentKey] ) )
+		formatString: #,0
+		displayFolder: 1 Volume
+		lineageTag: 9144a590-b8e3-52c3-b28b-693346e51210
+
+	measure 'Response SLA Met' = SUM ( FactTickets[ResponseSLAMet] )
+		formatString: #,0
+		displayFolder: 2 SLA
+		lineageTag: e14cc68f-0b3c-5775-aa58-230fa4be858b
+
+	measure 'Response SLA Measured' = COUNT ( FactTickets[ResponseSLAMet] )
+		formatString: #,0
+		displayFolder: 2 SLA
+		lineageTag: 8111d6a2-a801-52e0-b95d-0d81ccd7e218
+
+	measure 'Response SLA %' = DIVIDE ( [Response SLA Met], [Response SLA Measured] )
+		formatString: 0.0%
+		displayFolder: 2 SLA
+		lineageTag: 93b086ed-7923-5f56-adbf-806b65a509ec
+
+	measure 'Resolution SLA Met' = SUM ( FactTickets[ResolutionSLAMet] )
+		formatString: #,0
+		displayFolder: 2 SLA
+		lineageTag: ec2c11c0-22c5-5807-8b23-a2ab2215e0fd
+
+	measure 'Resolution SLA Measured' = COUNT ( FactTickets[ResolutionSLAMet] )
+		formatString: #,0
+		displayFolder: 2 SLA
+		lineageTag: 9232aa63-df1a-5910-951c-a7527db0fa24
+
+	measure 'Resolution SLA %' = DIVIDE ( [Resolution SLA Met], [Resolution SLA Measured] )
+		formatString: 0.0%
+		displayFolder: 2 SLA
+		lineageTag: c1ae8c08-df90-54d7-826f-afb71ba840d6
+
+	measure 'Breached Tickets' = CALCULATE ( [Total Tickets], FactTickets[ResolutionSLAMet] == 0 )
+		formatString: #,0
+		displayFolder: 2 SLA
+		lineageTag: 93396d74-97d7-519c-b4ee-d98fc2868f57
+
+	measure 'Response Breaches' = CALCULATE ( [Total Tickets], FactTickets[ResponseSLAMet] == 0 )
+		formatString: #,0
+		displayFolder: 2 SLA
+		lineageTag: 5c80e621-2684-5c29-aac9-671a355fa404
+
+	measure 'Breach Rate %' = DIVIDE ( [Breached Tickets], [Resolution SLA Measured] )
+		formatString: 0.0%
+		displayFolder: 2 SLA
+		lineageTag: bdca57d3-eebb-574c-a540-33f6b2a77032
+
+	measure 'Response Breach %' = DIVIDE ( [Response Breaches], [Response SLA Measured] )
+		formatString: 0%
+		displayFolder: 2 SLA
+		lineageTag: 58b9a2c6-dbab-5b7d-bab7-d3f4cffe976c
+
+	measure 'SLA Target %' =
+			DIVIDE (
+			    SUMX (
+			        VALUES ( DimPriority[PriorityKey] ),
+			        CALCULATE ( [Resolution SLA Measured] )
+			            * CALCULATE ( MAX ( DimPriority[ComplianceTarget] ) )
+			    ),
+			    [Resolution SLA Measured]
+			)
+		formatString: 0.0%
+		displayFolder: 2 SLA
+		lineageTag: ede66330-0db9-5da5-bb18-b5005eeacbb3
+
+	measure 'SLA Gap (pts)' = ( [Resolution SLA %] - [SLA Target %] ) * 100
+		formatString: +0.0;-0.0;0.0
+		displayFolder: 2 SLA
+		lineageTag: 339fb6e1-2d4c-5759-ab4b-bc53b2166e0a
+
+	measure 'SLA Status' =
+			SWITCH ( TRUE (),
+			    ISBLANK ( [Resolution SLA %] ), BLANK (),
+			    [Resolution SLA %] >= [SLA Target %], "On target",
+			    [Resolution SLA %] >= [SLA Target %] - 0.03, "Watch",
+			    "Below target"
+			)
+		displayFolder: 2 SLA
+		lineageTag: a711bcf7-548b-50c8-b64e-bfe6ce1dc123
+
+	measure 'SLA Status Color' =
+			SWITCH ( [SLA Status],
+			    "On target", "#006300",
+			    "Watch", "#8A6100",
+			    "Below target", "#D03B3B"
+			)
+		displayFolder: 2 SLA
+		lineageTag: ae413c2b-457c-57ed-be3a-090669cd7aee
+
+	measure 'SLA Status Icon' = SWITCH ( [SLA Status], "On target", "▲", "Watch", "●", "Below target", "▼" )
+		displayFolder: 2 SLA
+		lineageTag: 4eb9e11b-43d1-52fa-aefb-2b7c81a8c1b4
+
+	measure 'MTTA (mins)' = AVERAGE ( FactTickets[ResponseMinutes] )
+		formatString: 0.0
+		displayFolder: 3 Speed
+		lineageTag: 7bccc0f4-b20c-5b27-ade3-462f0c20a2b0
+
+	measure 'MTTR (hrs)' = AVERAGE ( FactTickets[ResolutionHours] )
+		formatString: 0.0
+		displayFolder: 3 Speed
+		lineageTag: e7750fd1-1d93-5aa6-b661-ff8776472bb9
+
+	measure 'Median Resolution (hrs)' = MEDIAN ( FactTickets[ResolutionHours] )
+		formatString: 0.0
+		displayFolder: 3 Speed
+		lineageTag: 9f58a2ca-7e0f-5073-9907-79e90c580d35
+
+	measure 'P90 Resolution (hrs)' =
+			PERCENTILEX.INC (
+			    FILTER ( FactTickets, NOT ISBLANK ( FactTickets[ResolutionHours] ) ),
+			    FactTickets[ResolutionHours],
+			    0.9
+			)
+		formatString: 0.0
+		displayFolder: 3 Speed
+		lineageTag: 355087e4-ec86-5eff-9959-3595e5ce1f86
+
+	measure 'As Of' = MAX ( DimSnapshot[AsOfDateTime] )
+		formatString: General Date
+		displayFolder: 4 Queue
+		lineageTag: 2d90e449-835f-5fa8-85ef-5a4c945a60f2
+
+	measure 'As Of Label' =
+			"Data as of " & FORMAT ( [As Of], "dd mmm yyyy, hh:nn" ) & "  ·  "
+			    & FORMAT ( MIN ( FactTickets[CreatedDate] ), "mmm yyyy" ) & " – "
+			    & FORMAT ( MAX ( FactTickets[CreatedDate] ), "mmm yyyy" )
+		displayFolder: 4 Queue
+		lineageTag: fb66f02c-47b7-511a-b87a-d55ff809f7b0
+
+	measure 'At-Risk Tickets' = CALCULATE ( [Total Tickets], FactTickets[SLAStatus] = "Open - At Risk" )
+		formatString: #,0
+		displayFolder: 4 Queue
+		lineageTag: 4a8c3f3b-c816-5fd9-948f-8f6eab104625
+
+	measure 'Overdue Open Tickets' = CALCULATE ( [Total Tickets], FactTickets[SLAStatus] = "Open - Overdue" )
+		formatString: #,0
+		displayFolder: 4 Queue
+		lineageTag: 47b05b04-546c-545c-9e50-e5e6eea69773
+
+	measure 'Avg Open Age (hrs)' =
+			VAR AsOf = [As Of]
+			RETURN
+			    AVERAGEX (
+			        FILTER ( FactTickets, FactTickets[IsOpen] = 1 ),
+			        ( AsOf - FactTickets[CreatedDateTime] ) * 24
+			    )
+		formatString: 0.0
+		displayFolder: 4 Queue
+		lineageTag: f0ea350d-ebaa-512e-b080-e3ab13e4cc32
+
+	measure 'Avg Reassignments' = AVERAGE ( FactTickets[ReassignmentCount] )
+		formatString: 0.00
+		displayFolder: 5 Quality
+		lineageTag: ff76fa39-f612-53e3-b9a6-c06d3f5c1e2e
+
+	measure 'Multi-Hop %' = DIVIDE ( CALCULATE ( [Total Tickets], FactTickets[ReassignmentCount] >= 2 ), [Total Tickets] )
+		formatString: 0.0%
+		displayFolder: 5 Quality
+		lineageTag: 3dee3a28-5664-5419-a2b3-f0660b80a1d9
+
+	measure 'Reopen Rate %' = DIVIDE ( CALCULATE ( [Resolved Tickets], FactTickets[Reopened] = 1 ), [Resolved Tickets] )
+		formatString: 0.0%
+		displayFolder: 5 Quality
+		lineageTag: 46da3ee6-4af7-565c-98aa-b2e232dcf306
+
+	measure 'Avg CSAT' = AVERAGE ( FactTickets[CSATScore] )
+		formatString: 0.00
+		displayFolder: 5 Quality
+		lineageTag: f012078a-856b-5c13-a2ff-0b289843c425
+
+	measure 'CSAT % Satisfied' =
+			DIVIDE (
+			    CALCULATE ( COUNT ( FactTickets[CSATScore] ), FactTickets[CSATScore] >= 4 ),
+			    COUNT ( FactTickets[CSATScore] )
+			)
+		formatString: 0.0%
+		displayFolder: 5 Quality
+		lineageTag: 0ffd659a-d02d-5d21-b029-cf27f391ad33
+
+	measure 'Resolution SLA % PM' = CALCULATE ( [Resolution SLA %], DATEADD ( DimDate[Date], -1, MONTH ) )
+		formatString: 0.0%
+		displayFolder: 6 Trend
+		lineageTag: 90b295b8-03d2-5702-9910-8c56b289cd89
+
+	measure 'Resolution SLA MoM (pts)' =
+			IF (
+			    NOT ISBLANK ( [Resolution SLA % PM] ),
+			    ( [Resolution SLA %] - [Resolution SLA % PM] ) * 100
+			)
+		formatString: +0.0;-0.0;0.0
+		displayFolder: 6 Trend
+		lineageTag: fea5b220-c58b-5af3-a0ab-c82644283ada
+
+	measure 'Resolution SLA % 30D' =
+			CALCULATE (
+			    [Resolution SLA %],
+			    DATESINPERIOD ( DimDate[Date], MAX ( DimDate[Date] ), -30, DAY )
+			)
+		formatString: 0.0%
+		displayFolder: 6 Trend
+		lineageTag: c089d42b-6e0a-578a-964f-8838ac35714d
+
+	measure 'Total Tickets PM' = CALCULATE ( [Total Tickets], DATEADD ( DimDate[Date], -1, MONTH ) )
+		formatString: #,0
+		displayFolder: 6 Trend
+		lineageTag: 919e2871-8402-52d6-9211-f00f1bf26b6e
+
+	measure 'Tickets MoM %' = DIVIDE ( [Total Tickets] - [Total Tickets PM], [Total Tickets PM] )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 6 Trend
+		lineageTag: 2a0c8328-071d-507d-bfa1-c2397ced821c
+
+	measure 'Agent SLA Rank' =
+			IF (
+			    HASONEVALUE ( DimAgent[AgentName] ),
+			    RANKX ( ALLSELECTED ( DimAgent[AgentName] ), [Resolution SLA %], , DESC, DENSE )
+			)
+		formatString: 0
+		displayFolder: 7 People
+		lineageTag: 9e592979-7d21-5107-9f3c-d94a14d54fdb
+
+	measure 'Title Overview' =
+			"Resolution SLA " & FORMAT ( [Resolution SLA %], "0.0%" )
+			    & " vs " & FORMAT ( [SLA Target %], "0.0%" ) & " target"
+		displayFolder: 8 Text
+		lineageTag: 550e4567-cec6-5162-9b85-e54f852f9e52
+
+	measure 'KPI Subtitle SLA' =
+			[SLA Status Icon] & " " & [SLA Status] & "  ·  "
+			    & FORMAT ( [SLA Gap (pts)], "+0.0;-0.0" ) & " pts vs " & FORMAT ( [SLA Target %], "0.0%" )
+		displayFolder: 8 Text
+		lineageTag: 65c626ea-6f6a-59d1-97c0-ad664192a1da
+
+	measure 'KPI Subtitle Agents' = FORMAT ( DISTINCTCOUNT ( FactTickets[AgentKey] ), "0" ) & " agents  ·  " & FORMAT ( [Tickets per Agent], "#,0" ) & " per agent"
+		displayFolder: 8 Text
+		lineageTag: d0041e96-955e-5dee-be14-5a8eb7ab812b
+
+	measure 'KPI Subtitle Reassign' = FORMAT ( [Multi-Hop %], "0.0%" ) & " reassigned 2+ times"
+		displayFolder: 8 Text
+		lineageTag: 6c1b7af6-62af-5058-b534-2e0952e1fa9a
+
+	measure 'KPI Subtitle Reopen' = FORMAT ( CALCULATE ( [Resolved Tickets], FactTickets[Reopened] = 1 ), "#,0" ) & " tickets reopened"
+		displayFolder: 8 Text
+		lineageTag: f4492584-9cb1-570e-906c-0a66d18713e6
+
+	measure 'KPI Subtitle Satisfied' = FORMAT ( [CSAT % Satisfied], "0%" ) & " rated 4 or 5"
+		displayFolder: 8 Text
+		lineageTag: a68130d9-930b-52c1-896c-bf7665fcf100
+
+	measure 'SLA Gap Label' =
+			IF (
+			    NOT ISBLANK ( [Resolution SLA %] ),
+			    [SLA Status Icon] & " " & FORMAT ( [SLA Gap (pts)], "+0.0;-0.0;0.0" )
+			)
+		displayFolder: 8 Text
+		lineageTag: 0ec703d8-fa44-505f-92ac-1ad73f7f33d1
+
+	measure 'KPI Subtitle Open' = FORMAT ( [Overdue Open Tickets], "#,0" ) & " overdue  ·  " & FORMAT ( [At-Risk Tickets], "#,0" ) & " at risk"
+		displayFolder: 8 Text
+		lineageTag: cc463244-1a53-5577-a925-b6e05c01e0d4
+
+	measure 'KPI Subtitle Response' = FORMAT ( [Response Breaches], "#,0" ) & " first-response breaches"
+		displayFolder: 8 Text
+		lineageTag: a15ac329-7caa-5d9a-a4a8-fa5320f733b6
+
+	measure 'KPI Subtitle Tickets' = FORMAT ( [Breached Tickets], "#,0" ) & " resolution breaches"
+		displayFolder: 8 Text
+		lineageTag: a006156f-6045-5a52-916b-fe7ad0c37024
+
+	measure 'KPI Subtitle MTTR' = "MTTA " & FORMAT ( [MTTA (mins)], "0" ) & " min  ·  P90 " & FORMAT ( [P90 Resolution (hrs)], "0" ) & " h"
+		displayFolder: 8 Text
+		lineageTag: cae72fdb-a8cc-5992-bc91-2df1e3e8cb46
+
+	measure 'KPI Subtitle CSAT' = "Reopen rate " & FORMAT ( [Reopen Rate %], "0.0%" )
+		displayFolder: 8 Text
+		lineageTag: 28c01eb8-c19e-5930-bd3b-fe43431bebd8
+
+	measure 'Selected Ticket Title' =
+			IF (
+			    HASONEVALUE ( FactTickets[TicketID] ),
+			    "Ticket " & SELECTEDVALUE ( FactTickets[TicketID] ),
+			    "Ticket detail - drill through from any ticket list"
+			)
+		displayFolder: 8 Text
+		lineageTag: 0f4b7465-32d7-5994-bd18-23de28bd58b0
+
+	column Dummy
+		dataType: string
+		isHidden
+		lineageTag: 92bd9da0-604d-5cd5-ace4-0f68dfa32182
+		summarizeBy: none
+		sourceColumn: Dummy
+
+		annotation SummarizationSetBy = Automatic
+
+	partition _Measures = m
+		mode: import
+		source =
+				let
+				    Source = #table(type table [Dummy = text], {})
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

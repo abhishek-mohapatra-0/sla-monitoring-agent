@@ -1,0 +1,80 @@
+table DimPriority
+	lineageTag: 8785233e-1e0c-5fad-b927-823b3db63f60
+
+	column PriorityKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: eb672fff-d6c0-562f-8ee3-4af4d3201b21
+		summarizeBy: none
+		sourceColumn: PriorityKey
+
+		annotation SummarizationSetBy = User
+
+	column Priority
+		dataType: string
+		lineageTag: 06993e4d-915c-59a8-9a27-c01f5cbb4bc9
+		summarizeBy: none
+		sourceColumn: Priority
+		sortByColumn: SortOrder
+
+		annotation SummarizationSetBy = User
+
+	column PriorityShort
+		dataType: string
+		lineageTag: 45fcfbfd-906b-5416-97b5-bcb912524e96
+		summarizeBy: none
+		sourceColumn: PriorityShort
+		sortByColumn: SortOrder
+
+		annotation SummarizationSetBy = User
+
+	column ResponseTargetMins
+		dataType: int64
+		formatString: 0
+		lineageTag: 9f565ce0-0a43-507b-a008-bd1cb8e1aeb8
+		summarizeBy: none
+		sourceColumn: ResponseTargetMins
+
+		annotation SummarizationSetBy = User
+
+	column ResolutionTargetHrs
+		dataType: int64
+		formatString: 0
+		lineageTag: 162af683-846b-57bc-85a6-a93edd0573da
+		summarizeBy: none
+		sourceColumn: ResolutionTargetHrs
+
+		annotation SummarizationSetBy = User
+
+	column ComplianceTarget
+		dataType: double
+		formatString: 0.0%
+		lineageTag: bcff5fef-2d80-5a1a-b7d3-2554f87e34e4
+		summarizeBy: none
+		sourceColumn: ComplianceTarget
+
+		annotation SummarizationSetBy = User
+
+	column SortOrder
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 2a103581-9a18-5ca6-a21d-618fe8bfd7c2
+		summarizeBy: none
+		sourceColumn: SortOrder
+
+		annotation SummarizationSetBy = User
+
+	partition DimPriority = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimPriority.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"PriorityKey", Int64.Type}, {"Priority", type text}, {"PriorityShort", type text}, {"ResponseTargetMins", Int64.Type}, {"ResolutionTargetHrs", Int64.Type}, {"ComplianceTarget", type number}, {"SortOrder", Int64.Type}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

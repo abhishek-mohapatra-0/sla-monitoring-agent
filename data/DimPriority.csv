@@ -1,0 +1,5 @@
+PriorityKey,Priority,PriorityShort,ResponseTargetMins,ResolutionTargetHrs,ComplianceTarget,SortOrder
+1,P1 - Critical,P1,15,4,0.98,1
+2,P2 - High,P2,30,8,0.95,2
+3,P3 - Medium,P3,120,24,0.92,3
+4,P4 - Low,P4,480,72,0.9,4

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SLA Monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="top">
+  <div><h1 id="pageTitle">SLA Performance Overview</h1><div class="asof" id="asof">Loading…</div></div>
+  <div class="slicers">
+    <div class="sl"><b>Date</b>
+      <select id="fDate">
+        <option value="all">All data</option>
+        <option value="12m">Last 12 months</option>
+        <option value="6m">Last 6 months</option>
+        <option value="3m">Last 3 months</option>
+        <option value="30d">Last 30 days</option>
+        <option value="custom">Custom range…</option>
+      </select></div>
+    <div class="sl custom" id="customBox"><b>From – to</b>
+      <div class="row"><input type="date" id="fStart"><input type="date" id="fEnd"></div></div>
+    <div class="sl"><b>Priority</b><select id="fPriority"><option value="">All</option></select></div>
+    <div class="sl"><b>Team</b><select id="fTeam"><option value="">All</option></select></div>
+    <div class="sl"><b>Channel</b><select id="fChannel"><option value="">All</option></select></div>
+    <button class="reset" id="reset" title="Clear all filters">Reset</button>
+  </div>
+</div>
+
+<!-- ============================ OVERVIEW -->
+<section class="page on" id="p-overview">
+  <div class="kpis k6" id="ovKpis"></div>
+  <div class="grid">
+    <div class="card"><h2>Resolution SLA % by month vs target</h2><div class="cap">March dip = ERP migration surge</div>
+      <div class="legend"><span><i class="sw" style="background:var(--s1)"></i>Resolution SLA %</span><span><i class="ln"></i>Target (weighted by priority mix)</span></div>
+      <div class="chart" id="ovTrend" data-h="245"></div></div>
+    <div class="card"><h2>Resolution SLA % by priority</h2><div class="cap">Tick = compliance target for that priority</div>
+      <div class="chart" id="ovPrio" data-h="268"></div></div>
+  </div>
+  <div class="grid">
+    <div class="card"><h2>Tickets created vs resolved</h2>
+      <div class="legend"><span><i class="sw" style="background:var(--s1)"></i>Created</span><span><i class="sw" style="background:var(--s2)"></i>Resolved</span></div>
+      <div class="chart" id="ovCvr" data-h="270"></div></div>
+    <div class="card"><h2>Team scorecard</h2><div class="cap">Click a team to filter the whole dashboard</div>
+      <table id="ovTeams"></table></div>
+  </div>
+</section>
+
+<!-- ============================ LIVE QUEUE -->
+<section class="page" id="p-queue">
+  <div class="kpis k4" id="qKpis"></div>
+  <div class="grid even">
+    <div class="card"><h2>Open tickets by team and SLA status</h2>
+      <div class="legend"><span><i class="sw" style="background:var(--crit)"></i>Overdue</span><span><i class="sw" style="background:var(--warn)"></i>At risk (75%+ of time used)</span><span><i class="sw" style="background:var(--s1)"></i>On track</span></div>
+      <div class="chart" id="qTeams" data-h="240"></div></div>
+    <div class="card"><h2>Backlog ageing</h2><div class="cap">Open tickets by age</div>
+      <div class="chart" id="qAging" data-h="252"></div></div>
+  </div>
+  <div class="card" style="margin-top:10px"><h2>Tickets to action</h2>
+    <div class="cap">Sorted by hours left before the resolution SLA breaches - negative means already breached. Click a row for details.</div>
+    <div class="scroll"><table id="qTable"></table></div></div>
+</section>
+
+<!-- ============================ TEAM & AGENT -->
+<section class="page" id="p-people">
+  <div class="grid">
+    <div class="card"><h2>Scorecard by team</h2><div class="cap">Click a team to expand agents · click an agent to see their trend</div>
+      <div class="scroll" style="max-height:600px"><table id="pTable"></table></div></div>
+    <div>
+      <div class="card"><h2>Agents: volume vs resolution SLA %</h2><div class="cap">Dashed line = SLA target · hover a dot for the agent</div>
+        <div class="chart" id="pScatter" data-h="255"></div></div>
+      <div class="card" style="margin-top:10px"><h2 id="pTrendTitle">Reopen rate by month - all agents</h2>
+        <div class="cap">A new joiner with a high reopen rate shows up here</div>
+        <div class="chart" id="pTrend" data-h="230"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ROOT CAUSE -->
+<section class="page" id="p-root">
+  <div class="grid">
+    <div class="card"><h2>Where do breaches come from?</h2>
+      <div class="cap">Pick a dimension, then click a bar to drill into it (like Power BI's decomposition tree)</div>
+      <div class="crumbs" id="rCrumbs"></div>
+      <div class="dims" id="rDims"></div>
+      <div class="chart" id="rTree" data-h="260"></div></div>
+    <div class="card"><h2>Breach rate by number of reassignments</h2><div class="cap">Every hand-off makes a breach more likely</div>
+      <div class="chart" id="rBands" data-h="300"></div></div>
+  </div>
+  <div class="grid wide">
+    <div class="card"><h2>Response breach % by weekday and hour created</h2><div class="cap">Darker = worse. Night hours (20:00-08:00) and weekends stand out</div>
+      <div class="chart" id="rHeat" data-h="250"></div></div>
+    <div class="card"><h2>Resolution SLA % - rolling 30 days</h2><div class="cap">March 2026 ERP migration shows as a sharp dip</div>
+      <div class="chart" id="rRoll" data-h="250"></div></div>
+  </div>
+</section>
+
+<!-- ============================ TICKET DETAIL -->
+<section class="page" id="p-detail">
+  <div class="search"><input id="tId" placeholder="Ticket ID, e.g. INC1059787"><button id="tGo">Look up</button></div>
+  <div id="tBody" class="card" style="margin-top:10px"><div class="empty">Search a ticket, or click one on the Live Queue page.</div></div>
+</section>
+
+<nav class="tabs" id="tabs">
+  <div data-p="overview" class="on">Overview</div><div data-p="queue">Live Queue</div>
+  <div data-p="people">Team &amp; Agent</div><div data-p="root">Breach Root Cause</div><div data-p="detail">Ticket Detail</div>
+</nav>
+<div id="tip"></div>
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

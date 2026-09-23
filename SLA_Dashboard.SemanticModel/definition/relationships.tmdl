@@ -1,0 +1,26 @@
+relationship d58f2060-8bd3-55a3-8b42-74428ebb765f
+	fromColumn: FactTickets.PriorityKey
+	toColumn: DimPriority.PriorityKey
+
+relationship 8e60f569-a4e6-52a8-b902-7d5a9ec187c3
+	fromColumn: FactTickets.TeamKey
+	toColumn: DimTeam.TeamKey
+
+relationship d6b4d731-826d-59a9-a509-f459deee964c
+	fromColumn: FactTickets.AgentKey
+	toColumn: DimAgent.AgentKey
+
+relationship 30c78f43-8f7b-52fe-a28f-68a1e37c8f79
+	fromColumn: FactTickets.CategoryKey
+	toColumn: DimCategory.CategoryKey
+
+relationship 588738d7-8f38-5ff0-8a86-cdc4d7425413
+	joinOnDateBehavior: datePartOnly
+	fromColumn: FactTickets.CreatedDate
+	toColumn: DimDate.Date
+
+relationship 9422c599-080a-51eb-8ae8-e7e2c2402996
+	isActive: false
+	joinOnDateBehavior: datePartOnly
+	fromColumn: FactTickets.ResolvedDate
+	toColumn: DimDate.Date

@@ -1,0 +1,126 @@
+table DimDate
+	lineageTag: 06e544f9-b23c-5fec-b927-4bd9aa39464e
+	dataCategory: Time
+
+	column Date
+		dataType: dateTime
+		isKey
+		formatString: Short Date
+		lineageTag: b60a3b06-8b75-57c0-b6b6-8a77c0beee46
+		summarizeBy: none
+		sourceColumn: Date
+
+		annotation SummarizationSetBy = User
+
+	column Year
+		dataType: int64
+		formatString: 0
+		lineageTag: e369043b-1775-5361-860b-845ecf64064b
+		summarizeBy: none
+		sourceColumn: Year
+
+		annotation SummarizationSetBy = User
+
+	column Quarter
+		dataType: string
+		lineageTag: 7a17a279-6270-5cf8-80af-5df4a8e900aa
+		summarizeBy: none
+		sourceColumn: Quarter
+
+		annotation SummarizationSetBy = User
+
+	column MonthNo
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 82bb8502-f531-5a1a-94b8-2ad95e713f63
+		summarizeBy: none
+		sourceColumn: MonthNo
+
+		annotation SummarizationSetBy = User
+
+	column MonthName
+		dataType: string
+		lineageTag: c4a1c76b-852a-5e5c-b39c-8fe7d3a4661b
+		summarizeBy: none
+		sourceColumn: MonthName
+		sortByColumn: MonthNo
+
+		annotation SummarizationSetBy = User
+
+	column MonthYear
+		dataType: string
+		lineageTag: 8e251dbe-e29b-50b2-aadc-015060a2f82b
+		summarizeBy: none
+		sourceColumn: MonthYear
+		sortByColumn: YearMonthSort
+
+		annotation SummarizationSetBy = User
+
+	column YearMonthSort
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 22a77819-e20e-5c24-8944-16e4b17303ae
+		summarizeBy: none
+		sourceColumn: YearMonthSort
+
+		annotation SummarizationSetBy = User
+
+	column WeekStart
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: bcb1554c-227f-53ac-a4d8-0e4d1b8365ab
+		summarizeBy: none
+		sourceColumn: WeekStart
+
+		annotation SummarizationSetBy = User
+
+	column DayOfWeekNo
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 9316f077-bf09-5c77-89a6-d48fe17e7d73
+		summarizeBy: none
+		sourceColumn: DayOfWeekNo
+
+		annotation SummarizationSetBy = User
+
+	column DayName
+		dataType: string
+		lineageTag: c6989c27-ef46-51ce-a8b2-07912a4abf7f
+		summarizeBy: none
+		sourceColumn: DayName
+		sortByColumn: DayOfWeekNo
+
+		annotation SummarizationSetBy = User
+
+	column IsWeekend
+		dataType: int64
+		formatString: 0
+		lineageTag: f15b5ae3-098d-512f-a615-04fff03a9412
+		summarizeBy: none
+		sourceColumn: IsWeekend
+
+		annotation SummarizationSetBy = User
+
+	column MonthLabel = FORMAT ( DimDate[Date], "mmm" ) & " '" & FORMAT ( DimDate[Date], "yy" )
+		dataType: string
+		lineageTag: 9e67d64d-9a0a-5313-aae5-d61f988cf934
+		summarizeBy: none
+		sortByColumn: YearMonthSort
+
+		annotation SummarizationSetBy = User
+
+	partition DimDate = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimDate.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"Date", type date}, {"Year", Int64.Type}, {"Quarter", type text}, {"MonthNo", Int64.Type}, {"MonthName", type text}, {"MonthYear", type text}, {"YearMonthSort", Int64.Type}, {"WeekStart", type date}, {"DayOfWeekNo", Int64.Type}, {"DayName", type text}, {"IsWeekend", Int64.Type}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

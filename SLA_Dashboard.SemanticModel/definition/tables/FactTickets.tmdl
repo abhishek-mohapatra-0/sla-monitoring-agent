@@ -1,0 +1,298 @@
+table FactTickets
+	lineageTag: 5f434991-a312-5c64-8191-4ff23c2bdae2
+
+	column TicketID
+		dataType: string
+		lineageTag: 56d264fd-e723-5ecb-9863-bb25a2817b8a
+		summarizeBy: none
+		sourceColumn: TicketID
+
+		annotation SummarizationSetBy = User
+
+	column CreatedDateTime
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 4900c633-6b33-5b92-8338-78742c8d4643
+		summarizeBy: none
+		sourceColumn: CreatedDateTime
+
+		annotation SummarizationSetBy = User
+
+	column CreatedDate
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: c9fdbd38-d24f-57fb-a151-040a6115ef6e
+		summarizeBy: none
+		sourceColumn: CreatedDate
+
+		annotation SummarizationSetBy = User
+
+	column CreatedHour
+		dataType: int64
+		formatString: 0
+		lineageTag: 51839032-716e-533f-a274-444423abb984
+		summarizeBy: none
+		sourceColumn: CreatedHour
+
+		annotation SummarizationSetBy = User
+
+	column PriorityKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 069d5257-f0b5-5f07-9c67-81b1c2c21f2c
+		summarizeBy: none
+		sourceColumn: PriorityKey
+
+		annotation SummarizationSetBy = User
+
+	column CategoryKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 717985ea-0fa4-5684-89ab-933af5408794
+		summarizeBy: none
+		sourceColumn: CategoryKey
+
+		annotation SummarizationSetBy = User
+
+	column TeamKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 63365622-ae22-582e-a92c-6cdc84a3ca09
+		summarizeBy: none
+		sourceColumn: TeamKey
+
+		annotation SummarizationSetBy = User
+
+	column AgentKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: f6f4cf31-13d7-57f0-b651-5fe120def123
+		summarizeBy: none
+		sourceColumn: AgentKey
+
+		annotation SummarizationSetBy = User
+
+	column Channel
+		dataType: string
+		lineageTag: 16bd7c73-f5e4-5505-9b4a-5ad15a66cf33
+		summarizeBy: none
+		sourceColumn: Channel
+
+		annotation SummarizationSetBy = User
+
+	column Status
+		dataType: string
+		lineageTag: 0c087955-a103-57c2-a711-4e2f6f2a3a74
+		summarizeBy: none
+		sourceColumn: Status
+
+		annotation SummarizationSetBy = User
+
+	column IsOpen
+		dataType: int64
+		formatString: 0
+		lineageTag: 1aa03c03-9ab8-5b98-89c7-c43f7e40d4e1
+		summarizeBy: none
+		sourceColumn: IsOpen
+
+		annotation SummarizationSetBy = User
+
+	column FirstResponseDateTime
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: ad485dcb-3e5f-5e16-8762-e1d016fb0672
+		summarizeBy: none
+		sourceColumn: FirstResponseDateTime
+
+		annotation SummarizationSetBy = User
+
+	column ResolvedDateTime
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 3f1480ea-3f7f-595e-8f21-3e976c7fa386
+		summarizeBy: none
+		sourceColumn: ResolvedDateTime
+
+		annotation SummarizationSetBy = User
+
+	column ResolvedDate
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 50a72d4e-0a13-5024-a964-5c72444941ac
+		summarizeBy: none
+		sourceColumn: ResolvedDate
+
+		annotation SummarizationSetBy = User
+
+	column ResponseDueDateTime
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 98340099-1c32-531d-ac31-2d179becda56
+		summarizeBy: none
+		sourceColumn: ResponseDueDateTime
+
+		annotation SummarizationSetBy = User
+
+	column ResolutionDueDateTime
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: a9b51b32-acf2-588e-bc7d-c7094264d01b
+		summarizeBy: none
+		sourceColumn: ResolutionDueDateTime
+
+		annotation SummarizationSetBy = User
+
+	column ResponseMinutes
+		dataType: double
+		formatString: 0.0
+		lineageTag: 2a6bf6dc-420b-5e2e-9fea-53848253bfa1
+		summarizeBy: none
+		sourceColumn: ResponseMinutes
+
+		annotation SummarizationSetBy = User
+
+	column ResolutionHours
+		dataType: double
+		formatString: 0.0
+		lineageTag: 8d3872fc-d4f3-582b-9e3d-824a86c25e5e
+		summarizeBy: none
+		sourceColumn: ResolutionHours
+
+		annotation SummarizationSetBy = User
+
+	column ResponseSLAMet
+		dataType: int64
+		formatString: 0
+		lineageTag: 2ea98fbd-9fb3-5a19-afc7-8b59c3458cc3
+		summarizeBy: none
+		sourceColumn: ResponseSLAMet
+
+		annotation SummarizationSetBy = User
+
+	column ResolutionSLAMet
+		dataType: int64
+		formatString: 0
+		lineageTag: 48feb0b7-a0a3-5930-9469-0762c8f10ee1
+		summarizeBy: none
+		sourceColumn: ResolutionSLAMet
+
+		annotation SummarizationSetBy = User
+
+	column SLAStatus
+		dataType: string
+		lineageTag: efb396a5-e9a8-51ea-b91e-79b80e7f4fe4
+		summarizeBy: none
+		sourceColumn: SLAStatus
+
+		annotation SummarizationSetBy = User
+
+	column ReassignmentCount
+		dataType: int64
+		formatString: 0
+		lineageTag: d4ac0ddf-b6e9-5915-b78b-5b32da3dd088
+		summarizeBy: none
+		sourceColumn: ReassignmentCount
+
+		annotation SummarizationSetBy = User
+
+	column Reopened
+		dataType: int64
+		formatString: 0
+		lineageTag: ffd57d0e-7ab6-59ed-90bb-02728dbf4c2e
+		summarizeBy: none
+		sourceColumn: Reopened
+
+		annotation SummarizationSetBy = User
+
+	column CSATScore
+		dataType: int64
+		formatString: 0
+		lineageTag: 7460dcb9-bd49-52da-a0a8-887ea4c36f61
+		summarizeBy: none
+		sourceColumn: CSATScore
+
+		annotation SummarizationSetBy = User
+
+	column 'Hours To Breach' =
+			IF (
+			    FactTickets[IsOpen] = 1,
+			    ( FactTickets[ResolutionDueDateTime] - MAX ( DimSnapshot[AsOfDateTime] ) ) * 24
+			)
+		dataType: double
+		formatString: 0.0
+		lineageTag: 300981af-40fc-5e90-91d4-959546a61927
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	column 'Backlog Age Bucket' =
+			VAR AgeHrs = ( MAX ( DimSnapshot[AsOfDateTime] ) - FactTickets[CreatedDateTime] ) * 24
+			RETURN
+			    IF (
+			        FactTickets[IsOpen] = 1,
+			        SWITCH ( TRUE (),
+			            AgeHrs < 4, "0-4 h",
+			            AgeHrs < 24, "4-24 h",
+			            AgeHrs < 72, "1-3 d",
+			            AgeHrs < 168, "3-7 d",
+			            "7+ d"
+			        )
+			    )
+		dataType: string
+		lineageTag: 550238d0-89d4-568a-ae5e-0d26152e9c4b
+		summarizeBy: none
+		sortByColumn: 'Backlog Age Sort'
+
+		annotation SummarizationSetBy = User
+
+	column 'Backlog Age Sort' =
+			VAR AgeHrs = ( MAX ( DimSnapshot[AsOfDateTime] ) - FactTickets[CreatedDateTime] ) * 24
+			RETURN
+			    IF (
+			        FactTickets[IsOpen] = 1,
+			        SWITCH ( TRUE (), AgeHrs < 4, 1, AgeHrs < 24, 2, AgeHrs < 72, 3, AgeHrs < 168, 4, 5 )
+			    )
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 250876e4-f9b6-54d1-b7e4-ab9af241831d
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	column 'Reassignment Band' =
+			SWITCH ( TRUE (),
+			    FactTickets[ReassignmentCount] = 0, "0",
+			    FactTickets[ReassignmentCount] = 1, "1",
+			    FactTickets[ReassignmentCount] = 2, "2",
+			    "3+"
+			)
+		dataType: string
+		lineageTag: a4a44fb3-ab07-56ca-bb59-827639a6ca81
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	column Shift = IF ( FactTickets[CreatedHour] >= 8 && FactTickets[CreatedHour] < 20, "Day", "Night" )
+		dataType: string
+		lineageTag: d56117e4-29eb-5974-9824-fa8920250418
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	partition FactTickets = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "FactTickets.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"TicketID", type text}, {"CreatedDateTime", type datetime}, {"CreatedDate", type date}, {"CreatedHour", Int64.Type}, {"PriorityKey", Int64.Type}, {"CategoryKey", Int64.Type}, {"TeamKey", Int64.Type}, {"AgentKey", Int64.Type}, {"Channel", type text}, {"Status", type text}, {"IsOpen", Int64.Type}, {"FirstResponseDateTime", type datetime}, {"ResolvedDateTime", type datetime}, {"ResolvedDate", type date}, {"ResponseDueDateTime", type datetime}, {"ResolutionDueDateTime", type datetime}, {"ResponseMinutes", type number}, {"ResolutionHours", type number}, {"ResponseSLAMet", Int64.Type}, {"ResolutionSLAMet", Int64.Type}, {"SLAStatus", type text}, {"ReassignmentCount", Int64.Type}, {"Reopened", Int64.Type}, {"CSATScore", Int64.Type}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+
