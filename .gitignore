@@ -3,6 +3,10 @@
 app/.venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+app/.env
+.env
+reports/
 Claude outputs/
 publish_to_github.py
 publish_to_github.bat

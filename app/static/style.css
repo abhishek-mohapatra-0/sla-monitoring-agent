@@ -94,3 +94,41 @@ tr.sel td { background: rgba(42, 120, 214, .12) !important }
 .timeline .s { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase }
 .timeline .a { font-size: 13px; font-weight: 600; margin-top: 2px }
 .empty { color: var(--muted); padding: 30px 0; text-align: center }
+
+/* ---------------- AI agent page */
+.tabs .ai { color: var(--s1); font-weight: 600 }
+.agentgrid { grid-template-columns: 1.35fr 1fr; align-items: start }
+.chatcard { display: flex; flex-direction: column; height: calc(100vh - 130px); min-height: 560px }
+.chathead { display: flex; align-items: center; gap: 10px; justify-content: space-between }
+.mode { font-size: 11px; padding: 2px 9px; border-radius: 10px; background: rgba(42,120,214,.10); color: var(--s1); font-weight: 600; white-space: nowrap }
+.mode.off { background: #efeee9; color: var(--ink2) }
+.msgs { flex: 1; overflow: auto; margin-top: 10px; padding-right: 4px; display: flex; flex-direction: column; gap: 10px }
+.msg { max-width: 92%; padding: 9px 12px; border-radius: 10px; line-height: 1.5; font-size: 13px }
+.msg.u { align-self: flex-end; background: var(--s1); color: #fff; border-bottom-right-radius: 3px }
+.msg.a { align-self: flex-start; background: #f1f0ec; border-bottom-left-radius: 3px }
+.msg.a p { margin: 4px 0 } .msg.a ul, .msg.a ol { margin: 4px 0 6px 18px }
+.msg.a table { margin: 6px 0; background: var(--surface); font-size: 11.5px }
+.msg.a td, .msg.a th { white-space: normal; text-align: left }
+.msg.a code { background: #e6e5df; padding: 0 4px; border-radius: 3px }
+.msg .tools { margin-top: 6px; font-size: 10.5px; color: var(--muted) }
+.msg .tools span { display: inline-block; background: var(--surface); border: 1px solid var(--grid); border-radius: 8px; padding: 0 6px; margin: 2px 3px 0 0 }
+.msg.think { color: var(--muted); font-style: italic }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px }
+.chips button { font: inherit; font-size: 11.5px; border: 1px solid var(--grid); background: var(--surface); color: var(--ink2);
+                border-radius: 14px; padding: 3px 10px; cursor: pointer }
+.chips button:hover { border-color: var(--s1); color: var(--s1) }
+.ask { display: flex; gap: 8px; margin-top: 8px }
+.ask input { flex: 1; font: inherit; font-size: 13.5px; padding: 9px 12px; border: 1px solid var(--grid); border-radius: 8px; outline: none; background: #fff }
+.ask input:focus { border-color: var(--s1) }
+.ask button, .btn { font: inherit; font-size: 12.5px; font-weight: 600; background: var(--s1); color: #fff; border: 0; border-radius: 8px; padding: 0 16px; cursor: pointer }
+.btn { padding: 6px 12px; font-size: 12px }
+.ask button:disabled, .btn:disabled { opacity: .5; cursor: default }
+.brief { margin-top: 8px; max-height: calc(100vh - 560px); min-height: 180px; overflow: auto }
+.brief .head { font-size: 13px; margin-bottom: 6px; line-height: 1.45 }
+.alert { display: flex; gap: 8px; padding: 6px 0; border-top: 1px solid var(--grid); font-size: 12px; line-height: 1.4 }
+.alert .sev { flex: none; font-size: 10.5px; font-weight: 700; color: #fff; border-radius: 9px; padding: 1px 7px; height: 17px }
+.sev.critical { background: var(--crit) } .sev.warning { background: #b07800 } .sev.info { background: var(--s1) }
+.alert .d { color: var(--ink2) }
+.rcpath { font-size: 12px; margin: 6px 0 8px; color: var(--ink2) } .rcpath b { color: var(--ink) }
+#aReportOut { font-size: 12px; margin-top: 6px }
+#aReportOut a { color: var(--s1) }

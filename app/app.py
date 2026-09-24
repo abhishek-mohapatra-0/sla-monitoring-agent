@@ -7,12 +7,18 @@ Needs: pip install -r requirements.txt   (Flask + pandas, both free)
 import webbrowser
 from threading import Timer
 
-from flask import Flask, abort, jsonify, render_template, request
+from pathlib import Path
 
+from flask import Flask, abort, jsonify, render_template, request, send_from_directory
+
+from agent import SLAAgent
+from agent.config import REPORTS_DIR
 from metrics import BREAKDOWN_DIMS, SLAData
 
 app = Flask(__name__)
 DATA = SLAData()
+AGENT = SLAAgent(DATA)          # Phase 2: the AI agent shares the same data + metric engine
+_BRIEF = {}
 PORT = 8050
 
 
@@ -73,7 +79,51 @@ def ticket(ticket_id):
     return jsonify(t) if t else (jsonify({"error": "not found"}), 404)
 
 
+# ------------------------------------------------------------------ AI agent
+@app.route("/api/agent/status")
+def agent_status():
+    return jsonify({"mode": AGENT.mode, "llm": AGENT.llm is not None})
+
+
+@app.route("/api/agent/chat", methods=["POST"])
+def agent_chat():
+    body = request.get_json(silent=True) or {}
+    msg = (body.get("message") or "").strip()[:2000]
+    if not msg:
+        return jsonify({"error": "empty message"}), 400
+    return jsonify(AGENT.chat(msg, body.get("history") or []))
+
+
+@app.route("/api/agent/briefing")
+def agent_briefing():
+    if "h" not in _BRIEF:                       # data is a daily snapshot: compute once per run
+        _BRIEF["h"] = AGENT.briefing()
+    return jsonify(_BRIEF["h"])
+
+
+@app.route("/api/agent/risk")
+def agent_risk():
+    return jsonify(AGENT.get_predictor().top_risk(limit=int(request.args.get("limit", 15))))
+
+
+@app.route("/api/agent/report", methods=["POST"])
+def agent_report():
+    send = request.args.get("send") == "1"
+    rep = AGENT.daily_report(send=send)
+    name = Path(rep["html_path"]).name
+    return jsonify({"subject": rep["subject"], "file": name, "html_url": f"/reports/{name}",
+                    "sent": rep["sent"] if send else {}})
+
+
+@app.route("/reports/<path:name>")
+def reports(name):
+    return send_from_directory(REPORTS_DIR, name)
+
+
 if __name__ == "__main__":
+    from threading import Thread
+    Thread(target=AGENT.get_predictor, daemon=True).start()     # warm up the ML model
     Timer(1.2, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
-    print(f"\n  SLA dashboard running at http://127.0.0.1:{PORT}   (Ctrl+C to stop)\n")
+    print(f"\n  SLA dashboard + AI agent running at http://127.0.0.1:{PORT}   (Ctrl+C to stop)")
+    print(f"  Agent mode: {AGENT.mode}\n")
     app.run(host="127.0.0.1", port=PORT, debug=False)

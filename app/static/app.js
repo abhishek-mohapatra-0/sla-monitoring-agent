@@ -2,7 +2,7 @@
 const S = { page: 'overview', meta: null, cache: {}, agent: null, path: [], dim: 'Team', openTeams: new Set() };
 const $ = id => document.getElementById(id);
 const TITLES = { overview: 'SLA Performance Overview', queue: 'Live Queue - what needs attention now',
-  people: 'Team & Agent Performance', root: 'Breach Root Cause - why are we breaching?', detail: 'Ticket Detail' };
+  people: 'Team & Agent Performance', root: 'Breach Root Cause - why are we breaching?', detail: 'Ticket Detail', agent: 'AI Agent - ask, explain, act' };
 
 let SEQ = 0;   // drop responses from older requests so fast filter clicks never show stale data
 async function get(url) {
@@ -202,14 +202,125 @@ async function renderDetail() {
       <div class="s">${s.step}${s.ok === true ? ' ✓ in time' : s.ok === false ? ' ✕ late' : ''}</div><div class="a">${s.at || (s.ok === false ? 'Not yet - SLA breached' : '—')}</div></div>`).join('')}</div>`;
 }
 
+
+/* ================================================================ AI agent */
+const A = { history: [], busy: false, loaded: false };
+const SUGGEST = ['How are we doing today?', 'Why did SLA drop in March?', 'Which tickets will breach next?',
+  'Which agents need support?', 'Why is Network Ops breaching?', 'Why do night tickets miss response SLA?',
+  'Compare August vs July', 'Tell me about INC1061815'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function md(src) {                       // small Markdown renderer for agent answers
+  const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*(?!\s)(.+?)\*(?!\*)/g, '$1<i>$2</i>')
+    .replace(/`(.+?)`/g, '<code>$1</code>').replace(/&lt;sub&gt;(.*?)&lt;\/sub&gt;/g, '<sub>$1</sub>')
+    .replace(/\b(INC\d{7})\b/g, '<a href="#" class="tk" data-t="$1">$1</a>');
+  const lines = src.split('\n'), out = []; let i = 0;
+  while (i < lines.length) {
+    const l = lines[i].trim();
+    if (l.startsWith('|') && i + 1 < lines.length && /^\|?\s*:?-{2,}/.test(lines[i + 1].trim())) {
+      const row = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const head = row(l); i += 2; const body = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) body.push(row(lines[i++]));
+      out.push('<table><tr>' + head.map(h => `<th>${inline(h)}</th>`).join('') + '</tr>' +
+        body.map(r => '<tr>' + r.map(c => `<td>${inline(c)}</td>`).join('') + '</tr>').join('') + '</table>');
+      continue;
+    }
+    const ul = l.match(/^[-*•]\s+(.*)/), ol = l.match(/^\d+[.)]\s+(.*)/);
+    if (ul || ol) {
+      const tag = ul ? 'ul' : 'ol', re = ul ? /^[-*•]\s+(.*)/ : /^\d+[.)]\s+(.*)/, items = [];
+      while (i < lines.length && re.test(lines[i].trim())) items.push(lines[i++].trim().match(re)[1]);
+      out.push(`<${tag}>` + items.map(x => `<li>${inline(x)}</li>`).join('') + `</${tag}>`); continue;
+    }
+    if (/^#{1,4}\s/.test(l)) out.push(`<p><b>${inline(l.replace(/^#+\s*/, ''))}</b></p>`);
+    else if (l) out.push(`<p>${inline(l)}</p>`);
+    i++;
+  }
+  return out.join('');
+}
+
+function addMsg(role, html, tools) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = html + (tools && tools.length ? `<div class="tools">tools used: ${tools.map(t =>
+    `<span title="${esc(JSON.stringify(t.args || {}))}">${esc(t.tool)}</span>`).join('')}</div>` : '');
+  $('aMsgs').appendChild(div); $('aMsgs').scrollTop = $('aMsgs').scrollHeight;
+  div.querySelectorAll('a.tk').forEach(a => a.onclick = e => { e.preventDefault(); openTicket(a.dataset.t); });
+  return div;
+}
+
+async function ask(q) {
+  q = (q || '').trim(); if (!q || A.busy) return;
+  A.busy = true; $('aSend').disabled = true; $('aInput').value = '';
+  addMsg('u', esc(q));
+  const wait = addMsg('a think', 'Thinking… (choosing tools and running the analysis)');
+  try {
+    const r = await fetch('/api/agent/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: q, history: A.history }) });
+    const j = await r.json(); wait.remove();
+    addMsg('a', md(j.answer || j.error || 'No answer'), j.tools);
+    A.history.push({ role: 'user', content: q }, { role: 'assistant', content: j.answer || '' });
+    A.history = A.history.slice(-10);
+  } catch (e) { wait.remove(); addMsg('a', 'Something went wrong: ' + esc(e.message)); }
+  A.busy = false; $('aSend').disabled = false; $('aInput').focus();
+}
+
+async function renderAgent() {
+  if (!A.loaded) {
+    A.loaded = true;
+    $('aChips').innerHTML = SUGGEST.map(s => `<button type="button">${esc(s)}</button>`).join('');
+    $('aChips').querySelectorAll('button').forEach(b => b.onclick = () => ask(b.textContent));
+    $('aForm').onsubmit = e => { e.preventDefault(); ask($('aInput').value); };
+    $('aReport').onclick = makeReport;
+    const st = await (await fetch('/api/agent/status')).json();
+    $('aMode').textContent = st.mode; $('aMode').classList.toggle('off', !st.llm);
+    addMsg('a', md(`Hi! I'm your **SLA Monitoring Agent**. I watch ${S.meta ? 'the ticket data' : 'the data'} as of **${S.meta.as_of}**, ` +
+      `explain breaches, flag people and process issues and predict which open tickets will breach.\n\n` +
+      (st.llm ? `Running on **${st.mode}**.` : `Running in **offline mode** (rule-based, no API key). Add a free Groq or Gemini key in \`app/.env\` for free-form questions.`) +
+      `\n\nTry a suggestion below or ask your own question.`));
+    const [b, rk] = await Promise.all([fetch('/api/agent/briefing').then(r => r.json()), fetch('/api/agent/risk').then(r => r.json())]);
+    renderBrief(b); renderRisk(rk);
+  }
+}
+
+function renderBrief(h) {
+  const c = h.current, [si, , sc] = status(c.status), pc = v => v == null ? '—' : (v * 100).toFixed(1) + '%';
+  $('aBriefCap').textContent = `Last ${h.window.days} days (${h.window.start} to ${h.window.end}) · ${h.counts.critical} critical · ${h.counts.warning} warnings · ${h.counts.info} info`;
+  const rc = h.root_cause.path.map(p => `${esc(p.dimension)} <b>${esc(p.value)}</b> (${pc(p.breach_rate)})`).join(' → ');
+  $('aBrief').innerHTML = `<div class="head">Resolution SLA <b>${pc(c.res_sla)}</b> vs ${pc(c.target)} target ·
+      <span class="st" style="color:${sc}">${si} ${esc(c.status)}</span> · ${c.open} open, <span class="neg">${c.overdue} overdue</span></div>
+    ${rc ? `<div class="rcpath">Root cause: ${rc}</div>` : ''}` +
+    h.alerts.map(a => `<div class="alert"><span class="sev ${a.severity}">${a.severity}</span>
+      <div><b>${esc(a.title)}</b><div class="d">${esc(a.detail)}</div></div></div>`).join('');
+}
+
+function renderRisk(r) {
+  const m = r.model;
+  $('aRiskCap').textContent = `Gradient boosting · ROC AUC ${m.roc_auc} · PR AUC ${m.pr_auc} (base rate ${(m.base_rate * 100).toFixed(1)}%) on ${m.test_period} · click a row`;
+  $('aRisk').innerHTML = '<tr><th>Ticket</th><th class="l">Team · agent</th><th>Hours left</th><th>Risk</th><th class="l" style="width:42%">Why</th></tr>' +
+    r.tickets.map(t => `<tr class="click" data-id="${t.ticket}"><td>${t.ticket}<div style="color:var(--muted);font-size:10.5px">${t.priority}</div></td>
+      <td class="l">${esc(t.team)}<div style="color:var(--muted);font-size:10.5px">${esc(t.agent)}</div></td><td>${t.hours_to_breach}</td>
+      <td class="neg">${Math.round(t.breach_risk * 100)}%</td><td class="l" style="white-space:normal;color:var(--ink2);font-size:11px">${esc(t.why.slice(0, 2).join('; '))}</td></tr>`).join('');
+  $('aRisk').querySelectorAll('tr.click').forEach(tr => tr.onclick = () => openTicket(tr.dataset.id));
+}
+
+async function makeReport() {
+  $('aReport').disabled = true; $('aReportOut').textContent = 'Building report…';
+  try {
+    const j = await (await fetch('/api/agent/report?send=1', { method: 'POST' })).json();
+    const sent = Object.entries(j.sent || {}).map(([k, v]) => `${k}: ${esc(v)}`).join(' · ');
+    $('aReportOut').innerHTML = `✓ <a href="${j.html_url}" target="_blank">Open ${esc(j.file)}</a> · saved in the <code>reports</code> folder${sent ? ' · ' + sent : ''}`;
+  } catch (e) { $('aReportOut').textContent = 'Failed: ' + e.message; }
+  $('aReport').disabled = false;
+}
+
 /* ================================================================ shell */
-const RENDER = { overview: renderOverview, queue: renderQueue, people: renderPeople, root: renderRoot, detail: renderDetail };
+const RENDER = { overview: renderOverview, queue: renderQueue, people: renderPeople, root: renderRoot, detail: renderDetail, agent: renderAgent };
 function switchPage(p) {
   S.page = p;
   document.querySelectorAll('.page').forEach(s => s.classList.toggle('on', s.id === 'p-' + p));
   document.querySelectorAll('#tabs div').forEach(t => t.classList.toggle('on', t.dataset.p === p));
   $('pageTitle').textContent = TITLES[p];
-  document.querySelector('.slicers').style.visibility = p === 'detail' ? 'hidden' : 'visible';
+  document.querySelector('.slicers').style.visibility = (p === 'detail' || p === 'agent') ? 'hidden' : 'visible';
   refresh();
 }
 async function refresh() {

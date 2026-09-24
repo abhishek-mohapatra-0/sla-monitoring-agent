@@ -1,11 +1,12 @@
-# SLA Dashboard: Step-by-Step Guide
+# SLA Monitoring Agent: Step-by-Step Guide
 
 Everything is in `Downloads\sla-monitoring-agent\sla-monitoring-agent\`:
 
 | File / folder | What it is |
 |---|---|
 | **SLA_Dashboard.pbix** | The finished Power BI dashboard (5 pages, data already loaded). Open this. |
-| **run_dashboard.bat** + `app\` | The same dashboard as a Python web app (exact look of the design picture, live filters) |
+| **run_dashboard.bat** + `app\` | The same dashboard as a Python web app, plus the **✦ AI Agent** tab |
+| `app\agent\` + `run_agent_chat.bat`, `run_daily_report.bat`, `schedule_daily_report.bat`, `setup_ai_key.bat` | The AI agent (Part D) |
 | SLA_Dashboard.pbip + `.Report` + `.SemanticModel` folders | The same report as a *Power BI Project* (plain-text files, good for GitHub) |
 | `data\` | The 7 CSV files the dashboard reads |
 | `powerbi\DAX_Measures.dax` | Every measure and calculated column, with comments |
@@ -57,7 +58,7 @@ Filters (Date, Priority, Team, Channel) sit in the top-right of each page and on
 
 ## Part A2: Run the Python web dashboard (5 minutes)
 
-This is the same dashboard as a web app. It looks exactly like the design picture, and Phase 2 (the agent) will be added to it.
+This is the same dashboard as a web app. It looks exactly like the design picture, and the last tab is the **✦ AI Agent** (Part D).
 
 **Option 1: one click**
 1. Double-click `run_dashboard.bat`.
@@ -80,7 +81,7 @@ This is the same dashboard as a web app. It looks exactly like the design pictur
 
 | File | Role |
 |---|---|
-| `app\metrics.py` | The SLA engine: every KPI, the breakdowns, open-ticket queue, ticket lookup. Same definitions as the DAX. **The agent will call these functions.** |
+| `app\metrics.py` | The SLA engine: every KPI, the breakdowns, open-ticket queue, ticket lookup. Same definitions as the DAX. **The agent's tools call these functions.** |
 | `app\app.py` | Flask web server with JSON endpoints (`/api/overview`, `/api/queue`, `/api/people`, `/api/rootcause`, `/api/breakdown`, `/api/ticket/<id>`) |
 | `app\templates\index.html` | Page layout |
 | `app\static\style.css` · `charts.js` · `app.js` | Styling, hand-built SVG charts (no chart library), page logic |
@@ -161,18 +162,72 @@ File → Save as → **.pbix** (one file, easy to share) or **.pbip** (text file
 | Dates look wrong / blank | Your Windows region uses a different date format. The queries force `en-US` parsing, so just Refresh |
 | Numbers differ from Part A | You regenerated the data with a different seed or date. That's fine; the patterns will still be there |
 | "One or more relationships need refresh" banner | Click **Refresh now** |
+| AI Agent badge still says *offline* | Check that `app\.env` (not `.env.example`) has `LLM_API_KEY=...`, save it, then restart `run_dashboard.bat` |
+| `doctor` says `HTTP 401` | The key is wrong or was deleted. Create a new one |
+| `doctor` says `HTTP 429` | Free-tier rate limit. Wait a minute. The agent answers offline meanwhile |
+| E-mail `failed: SMTPAuthenticationError` | Use a Gmail **App Password**, not your normal password |
+| `No module named sklearn` | Run `run_dashboard.bat` once; it installs the new packages |
 
 ---
 
-## Part D: What's next (Phase 2: the agent)
+## Part D: The AI agent (Phase 2)
 
-The agent reads the same CSVs and reproduces these measures in Python (pandas/DuckDB). It will:
-1. check every morning whether *Resolution SLA %* is below *SLA Target %*,
-2. run the same breakdown as the decomposition tree (Team → Priority → Reassignment Band …) to find the cause,
-3. write a plain-English summary and send it as an alert,
-4. answer questions like "why did SLA drop in March?".
+### D1. What it is
+The agent watches the SLA data and does four jobs a service-delivery manager would do every morning:
 
-The dashboard shows *what* is happening; the agent explains *why* and tells people.
+| Job | What happens | Where the code is |
+|---|---|---|
+| **Monitor** | Health check covering the last 30 days vs target and vs the previous 90 days, every team, the live queue, and the known risk patterns. Alerts are ranked critical / warning / info. | `app\agent\analysis.py` → `health_check()` |
+| **Explain** | Automatic root cause: drills down level by level into the segment with the most *excess breaches* (breaches above what the average rate predicts). | `analysis.py` → `root_cause()` |
+| **Predict** | ML model (gradient boosting) scores every open ticket for breach risk and says why. Tested on the last 60 days: ROC AUC 0.78. | `app\agent\predictor.py` |
+| **Report & answer** | Writes the daily report, e-mails or posts it, and answers questions in plain English. | `core.py`, `report.py`, `notify.py`, `offline.py`, `llm.py` |
+
+### D2. How a question is answered (the agent loop)
+1. You ask: *"Why is Network Ops breaching?"*
+2. `core.py` sends the question to the LLM with a system prompt (today's date, teams, SLA policy, rules) and the **11 tool definitions** from `tools.py`.
+3. The LLM answers with a *tool call*, for example `root_cause(team="Network Ops")`.
+4. Python runs that tool with pandas and returns the JSON result to the LLM.
+5. The LLM may call more tools, such as `compare_periods` or `find_outliers`, up to 6 steps, and then writes the answer: headline, evidence and recommended actions.
+6. The web page shows the answer and the tools used.
+
+**No API key, or the internet is down?** The agent switches to **offline mode**. `offline.py` recognises the question type from keywords, pulls out the team, priority, agent and month, runs the same tools and fills an answer template. So the agent always works.
+
+The LLM never does the maths. All numbers come from the same pandas code as the dashboard, so the agent and the dashboards always agree.
+
+### D3. Set it up (10 minutes)
+1. **Start it:** double-click `run_dashboard.bat`. It installs scikit-learn the first time, which takes about a minute. Open the **✦ AI Agent** tab (last tab at the bottom). The badge says *offline (rule-based)*.
+2. **Add a free LLM (recommended):** double-click `setup_ai_key.bat`.
+   - The Groq console opens. Sign in with Google, then click **Create API Key** and copy it.
+   - Notepad opens `app\.env`. Paste the key after `LLM_API_KEY=` and save.
+   - Close the dashboard window and run `run_dashboard.bat` again. The badge now says **groq · llama-3.3-70b-versatile**.
+   - Check it: open a terminal in `app\` and run `.venv\Scripts\python run_agent.py doctor`. It should say `LLM test: OK`.
+   - Prefer Google? Set `LLM_PROVIDER=gemini` and use a key from aistudio.google.com/apikey.
+3. **E-mail the report (optional):** in `app\.env` fill `SMTP_USER` (your Gmail), `SMTP_PASSWORD` and `ALERT_EMAIL_TO`. For the password, use a Gmail *App Password*: myaccount.google.com → Security → 2-Step Verification → App passwords. Don't use your normal password.
+4. **Slack / Teams alert (optional):** paste an incoming-webhook URL into `WEBHOOK_URL`.
+5. **Automate it:** double-click `schedule_daily_report.bat` and enter a time (e.g. 09:00). Windows then runs the agent every day, saves `reports\sla_report_<date>.html` and sends it. The log goes to `reports\agent_log.txt`.
+
+### D4. Use it every day
+| Where | What to do |
+|---|---|
+| **✦ AI Agent tab** | Read *Today's briefing* (status, root cause, alerts) and the *Breach risk* table (click a ticket to open it). Ask questions in the chat or click a suggestion. Click **Generate daily report** to build and send the report. |
+| `run_agent_chat.bat` | The same chat in a terminal window |
+| `run_daily_report.bat` | Builds today's report and opens it in the browser |
+| E-mail / Teams | The scheduled report arrives every morning |
+
+Good demo questions for an interview:
+
+- *How are we doing today?*
+- *Why did SLA drop in March?* (answer: ERP surge → tickets reassigned 3+ times)
+- *Which tickets will breach in the next 4 hours?*
+- *Which agents need support?*
+- *Why is Network Ops breaching?*
+- *Compare August vs July*
+
+### D5. How to explain it in an interview
+> "I built an SLA monitoring agent for an IT service desk. A pandas metric engine feeds both a Power BI dashboard and a Flask app. On top of it, an LLM agent uses tool calling to answer questions like *why did SLA drop in March* by running a root-cause drill-down. It uses the same excess-breach logic as a decomposition tree, so every number is exact. A gradient-boosting model predicts which open tickets will breach (AUC 0.78 on a time-based holdout). Every morning it builds an HTML report with an executive summary and recommended actions and e-mails it. It runs on free models (Groq, Gemini or a local Ollama), falls back to a rule-based mode with no key, and it's covered by 18 automated tests, including a fake LLM server for the tool loop."
+
+### D6. Tests
+In `app\` with the venv active: `pip install pytest`, then `cd ..` and `python -m pytest -q`. You should see `18 passed`.
 
 ---
 
@@ -189,6 +244,7 @@ The script never uploads `app\.venv`, Power BI cache files (`cache.abf`, `localS
 **Changed something later?** Run the same bat again with a new token. It adds a new commit to the same repo.
 
 **After publishing:**
+- Repo page → **Settings** → *General* → **Social preview** → *Edit* → upload `docs\images\social_preview.png`. This is the card people see when the link is shared on LinkedIn, WhatsApp or Slack.
 - Your profile → **Customize your pins** → pin `sla-monitoring-agent`.
 - Delete the token when you're done: github.com → Settings → Developer settings → Personal access tokens → Delete.
 
